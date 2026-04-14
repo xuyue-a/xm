@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.ItemTypeMapper">
+
+    <!-- 结果映射（统一字段转换） -->
+    <resultMap id="ItemTypeResultMap" type="com.example.entity.ItemType">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="type_code" property="typeCode"/>
+        <result column="remark" property="remark"/>
+    </resultMap>
+
+    <!-- 条件查询/无参查询所有 -->
+    <select id="selectAll" resultMap="ItemTypeResultMap">
+        select id, name, type_code, remark from `itemtype`
+        <where>
+            <if test="name != null and name != ''">
+                name like concat('%', #{name}, '%')
+            </if>
+            <if test="typeCode != null and typeCode != ''">
+                and type_code like concat('%', #{typeCode}, '%')
+            </if>
+        </where>
+    </select>
+
+    <!-- 根据ID查询 -->
+    <select id="selectById" resultMap="ItemTypeResultMap">
+        select id, name, type_code, remark from `itemtype` where id = #{id}
+    </select>
+
+    <!-- 新增分类 -->
+    <insert id="insert" parameterType="com.example.entity.ItemType">
+        insert into `itemtype` (name, type_code, remark)
+        values (#{name}, #{typeCode}, #{remark})
+    </insert>
+
+    <!-- 更新分类 -->
+    <update id="updateById" parameterType="com.example.entity.ItemType">
+        update `itemtype`
+        set name = #{name}, type_code = #{typeCode}, remark = #{remark}
+        where id = #{id}
+    </update>
+
+    <!-- 批量删除 -->
+    <delete id="deleteBatch">
+        delete from `itemtype` where id in
+        <foreach collection="list" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

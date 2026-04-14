@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.EquipmentBorrowRecordMapper">
+
+    <!-- 借用记录结果映射（新增 original_id 映射） -->
+    <resultMap id="BorrowRecordResultMap" type="com.example.entity.EquipmentBorrowRecord">
+        <id column="id" property="id"/>
+        <result column="equip_id" property="equipId"/>
+        <result column="equip_name" property="equipName"/>
+        <result column="user_id" property="userId"/>
+        <result column="user_name" property="userName"/>
+        <result column="reviewer_id" property="reviewerId"/>
+        <result column="reviewer_name" property="reviewerName"/>
+        <result column="apply_time" property="applyTime"/>
+        <result column="approve_time" property="approveTime"/>
+        <result column="status" property="status"/>
+        <result column="type" property="type"/>
+        <result column="remark" property="remark"/>
+        <result column="review_remark" property="reviewRemark"/>
+        <result column="lend_status" property="lendStatus"/> <!-- 新增 -->
+        <result column="return_status" property="returnStatus"/> <!-- 新增 -->
+        <result column="borrow_time" property="borrowTime"/>
+        <result column="return_time" property="returnTime"/>
+        <result column="borrow_days" property="borrowDays"/>
+        <result column="expected_return_date" property="expectedReturnDate"/>
+        <result column="original_id" property="originalId"/> <!-- 新增 -->
+    </resultMap>
+
+    <!-- 条件查询借用/归还记录（新增 originalId 条件） -->
+    <select id="selectAll" resultMap="BorrowRecordResultMap">
+        SELECT
+        br.*,
+        e.name AS equip_name,
+        e.serial_number AS serial_number,
+        ut.name AS user_name,
+        a.name AS reviewer_name
+        FROM borrow_record br
+        LEFT JOIN equipment e ON br.equip_id = e.id
+        LEFT JOIN usertable ut ON br.user_id = ut.id
+        LEFT JOIN admin a ON br.reviewer_id = a.id
+        <where>
+            <if test="equipId != null">
+                AND br.equip_id = #{equipId}
+            </if>
+            <if test="userId != null">
+                AND br.user_id = #{userId}
+            </if>
+            <if test="status != null and status != ''">
+                AND br.status = #{status}
+            </if>
+            <if test="type != null and type != ''">
+                AND br.type = #{type}
+            </if>
+            <if test="reviewerId != null">
+                AND br.reviewer_id = #{reviewerId}
+            </if>
+            <if test="equipName != null and equipName != ''">
+                AND e.name LIKE CONCAT('%', #{equipName}, '%')
+            </if>
+            <if test="originalId != null">
+                AND br.original_id = #{originalId}
+            </if>
+            <if test="startTime != null and startTime != ''">
+                AND DATE(br.apply_time) >= #{startTime}
+            </if>
+            <if test="endTime != null and endTime != ''">
+                AND DATE(br.apply_time) &lt;= #{endTime}
+            </if>
+        </where>
+        ORDER BY
+        CASE br.status
+        WHEN 'pending' THEN 1
+        WHEN 'approved' THEN 2
+        WHEN 'completed' THEN 3
+        WHEN 'rejected' THEN 4
+        ELSE 5
+        END ASC,
+        apply_time DESC
+    </select>
+
+    <insert id="insert" parameterType="com.example.entity.EquipmentBorrowRecord" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO borrow_record (
+            equip_id, user_id, reviewer_id, apply_time, approve_time,
+            status, type, remark, review_remark, lend_status, return_status,
+            borrow_time, return_time, borrow_days, expected_return_date, original_id
+        ) VALUES (
+                     #{equipId}, #{userId}, #{reviewerId}, #{applyTime}, #{approveTime},
+                     #{status}, #{type}, #{remark}, #{reviewRemark}, #{lendStatus}, #{returnStatus},
+                     #{borrowTime}, #{returnTime}, #{borrowDays}, #{expectedReturnDate}, #{originalId}
+                 )
+    </insert>
+
+    <update id="updateById" parameterType="com.example.entity.EquipmentBorrowRecord">
+        UPDATE borrow_record
+        SET
+        equip_id = #{equipId},
+        user_id = #{userId},
+        reviewer_id = #{reviewerId},
+        apply_time = #{applyTime},
+        approve_time = #{approveTime},
+        status = #{status},
+        type = #{type},
+        remark = #{remark},
+        review_remark = #{reviewRemark},
+        lend_status = #{lendStatus}, <!-- 新增 -->
+        return_status = #{returnStatus}, <!-- 新增 -->
+        borrow_time = #{borrowTime},
+        return_time = #{returnTime},
+        borrow_days = #{borrowDays},
+        expected_return_date = #{expectedReturnDate},
+        original_id = #{originalId}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 审批更新 -->
+    <update id="review">
+        UPDATE borrow_record
+        SET
+        status = #{status},
+        reviewer_id = #{reviewerId},
+        approve_time = #{approveTime},
+        review_remark = #{reviewRemark},
+        lend_status = #{lendStatus}, <!-- 新增：接收管理员填写的借出状态 -->
+        borrow_time = CASE WHEN #{type} = 'borrow' AND #{status} = 'approved' THEN NOW() ELSE borrow_time END,
+        return_time = CASE WHEN #{type} = 'return' AND #{status} = 'approved' THEN NOW() ELSE return_time END,
+        status = CASE WHEN #{type} = 'return' AND #{status} = 'approved' THEN 'completed' ELSE #{status} END
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID查询记录 -->
+    <select id="selectById" parameterType="Integer" resultMap="BorrowRecordResultMap">
+        SELECT
+            br.*,
+            e.name AS equip_name,
+            ut.name AS user_name,
+            a.name AS reviewer_name
+        FROM borrow_record br
+                 LEFT JOIN equipment e ON br.equip_id = e.id
+                 LEFT JOIN usertable ut ON br.user_id = ut.id
+                 LEFT JOIN admin a ON br.reviewer_id = a.id
+        WHERE br.id = #{id}
+
+    </select>
+
+    <!-- 根据设备ID查询记录 -->
+    <select id="selectByEquipId" parameterType="Integer" resultMap="BorrowRecordResultMap">
+        SELECT
+            br.*,
+            e.name AS equip_name,
+            ut.name AS user_name,
+            a.name AS reviewer_name
+        FROM borrow_record br
+                 LEFT JOIN equipment e ON br.equip_id = e.id
+                 LEFT JOIN usertable ut ON br.user_id = ut.id
+                 LEFT JOIN admin a ON br.reviewer_id = a.id
+        WHERE br.equip_id = #{equipId}
+        ORDER BY br.apply_time DESC
+    </select>
+
+    <delete id="deleteById" parameterType="java.lang.Integer">
+        DELETE FROM borrow_record WHERE id = #{id}
+    </delete>
+
+</mapper>

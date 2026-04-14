@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.EquipmentMapper">
+
+    <!-- 设备结果映射 -->
+    <resultMap id="EquipmentResultMap" type="com.example.entity.Equipment">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="brand" property="brand"/>
+        <result column="model" property="model"/>
+        <result column="storage_id" property="storageId"/>
+        <result column="storage_name" property="storageName"/>
+        <result column="type_id" property="typeId"/>
+        <result column="type_name" property="typeName"/>
+        <result column="status" property="status"/>
+        <result column="current_user_id" property="currentUserId"/>
+        <result column="current_user_name" property="currentUserName"/>
+        <result column="borrow_date" property="borrowDate"/>
+        <result column="expected_return_date" property="expectedReturnDate"/>
+        <result column="actual_return_date" property="actualReturnDate"/>
+        <result column="serial_number" property="serialNumber"/>
+        <result column="purchase_date" property="purchaseDate"/>
+        <result column="price" property="price"/>
+        <result column="remark" property="remark"/>
+    </resultMap>
+
+    <!-- 条件查询设备 -->
+    <select id="selectAll" resultMap="EquipmentResultMap">
+        SELECT
+        e.*,
+        s.name AS storage_name,
+        it.name AS type_name,
+        ut.name AS current_user_name
+        FROM equipment e
+        LEFT JOIN storage s ON e.storage_id = s.id
+        LEFT JOIN itemtype it ON e.type_id = it.id
+        LEFT JOIN usertable ut ON e.current_user_id = ut.id
+        <where>
+            <if test="name != null and name != ''">
+                AND e.name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="brand != null and brand != ''">
+                AND e.brand LIKE CONCAT('%', #{brand}, '%')
+            </if>
+            <if test="status != null and status != ''">
+                AND e.status = #{status}
+            </if>
+            <if test="storageId != null">
+                AND e.storage_id = #{storageId}
+            </if>
+            <if test="userId != null">
+                AND e.current_user_id = #{userId}
+            </if>
+        </where>
+        ORDER BY e.id DESC
+    </select>
+
+    <!-- 新增设备 -->
+    <insert id="insert" parameterType="com.example.entity.Equipment" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO equipment (
+            name, brand, model, storage_id, type_id, status,
+            current_user_id, borrow_date, expected_return_date, actual_return_date,
+            serial_number, purchase_date, price, remark
+        ) VALUES (
+                     #{name}, #{brand}, #{model}, #{storageId}, #{typeId}, #{status},
+                     #{currentUserId}, #{borrowDate}, #{expectedReturnDate}, #{actualReturnDate},
+                     #{serialNumber}, #{purchaseDate}, #{price}, #{remark}
+                 )
+    </insert>
+
+    <!-- 根据ID更新设备 -->
+    <update id="updateById" parameterType="com.example.entity.Equipment">
+        UPDATE equipment
+        SET name = #{name},
+            brand = #{brand},
+            model = #{model},
+            storage_id = #{storageId},
+            type_id = #{typeId},
+            status = #{status},
+            current_user_id = #{currentUserId},
+            borrow_date = #{borrowDate},
+            expected_return_date = #{expectedReturnDate},
+            actual_return_date = #{actualReturnDate},
+            serial_number = #{serialNumber},
+            purchase_date = #{purchaseDate},
+            price = #{price},
+            remark = #{remark}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID删除设备 -->
+    <delete id="deleteById" parameterType="Integer">
+        DELETE FROM equipment WHERE id = #{id}
+    </delete>
+
+    <!-- 根据ID查询设备 -->
+    <select id="selectById" parameterType="Integer" resultMap="EquipmentResultMap">
+        SELECT
+            e.*,
+            s.name AS storage_name,
+            it.name AS type_name,
+            ut.name AS current_user_name
+        FROM equipment e
+                 LEFT JOIN storage s ON e.storage_id = s.id
+                 LEFT JOIN itemtype it ON e.type_id = it.id
+                 LEFT JOIN usertable ut ON e.current_user_id = ut.id
+        WHERE e.id = #{id}
+    </select>
+
+    <!-- 设备使用统计：关联借用记录 -->
+    <select id="selectEquipStats" resultType="java.util.Map">
+        SELECT
+        br.id,
+        br.type,
+        br.status,
+        br.apply_time,
+        br.approve_time,
+        ut.name AS user_name,
+        a.name AS reviewer_name,
+        br.borrow_time,
+        br.return_time
+        FROM equipment_borrow_record br
+        LEFT JOIN usertable ut ON br.user_id = ut.id
+        LEFT JOIN admin a ON br.reviewer_id = a.id
+        <where>
+            br.equip_id = #{equipId}
+            <if test="startTime != null and startTime != ''">
+                AND br.apply_time >= #{startTime}
+            </if>
+            <if test="endTime != null and endTime != ''">
+                AND br.apply_time &lt;= #{endTime}
+            </if>
+        </where>
+        ORDER BY br.apply_time DESC
+    </select>
+
+    <!-- 更新设备状态（简化版，用于审批后） -->
+    <update id="updateEquipStatus">
+        UPDATE equipment
+        SET status = #{status},
+            current_user_id = #{currentUserId},
+            borrow_date = #{borrowDate},
+            actual_return_date = #{actualReturnDate}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

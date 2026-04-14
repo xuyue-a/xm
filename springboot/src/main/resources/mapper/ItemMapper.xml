@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.ItemMapper">
+
+    <select id="selectAll" resultType="com.example.entity.Item">
+        select
+        item.*,
+        storage.name as storageName,
+        itemType.name as typeName
+        from item
+        left join storage on item.storage_id = storage.id
+        left join itemtype on item.type_id = itemtype.id
+        <where>
+            <if test="name != null">item.name like concat('%', #{name}, '%')</if>
+            <if test="storageId != null">and item.storage_id = #{storageId}</if>
+            <if test="typeId != null">and item.type_id = #{typeId}</if>
+            <if test="model != null">and item.model like concat('%', #{model}, '%')</if>
+        </where>
+    </select>
+
+    <select id="selectByTypeId" resultType="com.example.entity.Item">
+        SELECT
+            item.id,
+            item.name,
+            item.item_code as itemCode,
+            item.type_id as typeId,
+            item.storage_id as storageId,
+            storage.name as storageName,
+            itemtype.name as typeName,
+            item.model as model
+        FROM item
+                 LEFT JOIN storage ON item.storage_id = storage.id
+                 LEFT JOIN itemtype ON item.type_id = itemtype.id
+        WHERE item.type_id = #{typeId}
+        ORDER BY item.id
+    </select>
+    <select id="selectByNameAndModel" resultType="com.example.entity.Item">
+        SELECT * FROM item
+        WHERE name = #{itemName} AND model = #{model}
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.example.entity.Item">
+        insert into `item` (name, item_code, storage_id, type_id, count, remark, model)
+        values (#{name}, #{itemCode}, #{storageId}, #{typeId}, #{count}, #{remark}, #{model})
+    </insert>
+
+    <update id="updateById" parameterType="com.example.entity.Item">
+        update `item` set
+                          name = #{name},
+                          item_code = #{itemCode},
+                          storage_id = #{storageId},
+                          type_id = #{typeId},
+                          count = #{count},
+                          remark = #{remark},
+                          model = #{model},
+                          unit = #{unit}
+        where id = #{id}
+    </update>
+
+    <!-- 批量删除 -->
+    <delete id="deleteBatch">
+        delete from item where id in
+        <foreach collection="list" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

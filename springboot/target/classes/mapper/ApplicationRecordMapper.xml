@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.ApplicationRecordMapper">
+
+    <select id="selectAll" resultType="com.example.entity.ApplicationRecord">
+        SELECT
+        ar.id,
+        ar.user_id,
+        ut.username AS user_account,
+        ut.name AS user_name,
+        ar.type,
+        ar.item_type,
+        ar.item_type_str,
+        COALESCE(it2.name, it.name, ar.item_type_str) AS item_type_name,
+        ar.item_id,
+        COALESCE(item.item_code, '') AS item_code,
+        COALESCE(item.name, ar.item_name_temp) AS item_name,
+        ar.item_name_temp,
+        ar.quantity,
+        ar.apply_time,
+        ar.status,
+        ar.reviewer_id,
+        a.name AS admin_name,
+        ar.review_time,
+        ar.review_remark,
+        ar.storage_id,
+        s.name AS storage_name,
+        ar.remark,
+        ar.unit_price,
+        ar.total_price,
+        ar.purchase_dept,
+        ar.purpose,
+        ar.model AS model,
+        ar.purchase_way,
+        ar.model_temp
+        FROM application_record ar
+        LEFT JOIN usertable ut ON ar.user_id = ut.id
+        LEFT JOIN item ON ar.item_id = item.id
+        LEFT JOIN itemtype it ON ar.item_type = it.id
+        LEFT JOIN itemtype it2 ON item.type_id = it2.id
+        LEFT JOIN storage s ON ar.storage_id = s.id
+        LEFT JOIN admin a ON ar.reviewer_id = a.id
+        <where>
+            <if test="type != null and type != ''">
+                AND type = #{type}
+            </if>
+            <if test="itemType != null and itemType != ''">
+                AND item_type = #{itemType}
+            </if>
+            <if test="itemName != null and itemName != ''">
+                AND item_name LIKE CONCAT('%', #{itemName}, '%')
+            </if>
+            <if test="storageId != null and storageId != ''">
+                AND storage_id = #{storageId}
+            </if>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+            <if test="model != null and model != ''">
+                AND ar.model LIKE CONCAT('%', #{model}, '%')
+            </if>
+            <if test="status != null and status != ''">
+                AND status IN
+                <foreach collection="status.split(',')" item="s" open="(" separator="," close=")">
+                    #{s}
+                </foreach>
+            </if>
+        </where>
+        ORDER BY
+        CASE status
+        WHEN 'pending' THEN 1
+        WHEN 'approved' THEN 2
+        WHEN 'rejected' THEN 3
+        WHEN 'completed' THEN 4
+        ELSE 5
+        END ASC,
+        apply_time DESC
+    </select>
+
+    <insert id="insert" parameterType="com.example.entity.ApplicationRecord">
+        insert into `application_record` (
+        user_id, name_id, type, item_type, item_type_str, item_name_temp, item_id, quantity,
+        apply_time, status, reviewer_id, review_time, review_remark, storage_id, remark,
+        unit_price, total_price, purchase_dept, purpose, model, model_temp,
+        purchase_way
+        ) values (
+        #{userId}, #{nameId}, #{type}, #{itemType}, #{itemTypeStr}, #{itemNameTemp}, #{itemId}, #{quantity},
+        #{applyTime}, #{status}, #{reviewerId}, #{reviewTime}, #{reviewRemark}, #{storageId}, #{remark},
+        #{unitPrice}, #{totalPrice}, #{purchaseDept}, #{purpose}, #{model}, #{modelTemp},
+        #{purchaseWay}
+        )
+    </insert>
+
+    <update id="updateById" parameterType="com.example.entity.ApplicationRecord">
+        update `application_record`
+        set user_id = #{userId},
+        type = #{type},
+        item_type= #{itemType},
+        item_type_str = #{itemTypeStr},
+        item_name_temp = #{itemNameTemp},
+        item_id = #{itemId},
+        quantity= #{quantity},
+        apply_time = #{applyTime},
+        status = #{status},
+        reviewer_id = #{reviewerId},
+        review_time = #{reviewTime},
+        review_remark = #{reviewRemark},
+        storage_id = #{storageId},
+        remark = #{remark},
+        unit_price = #{unitPrice},
+        total_price = #{totalPrice},
+        purchase_dept = #{purchaseDept},
+        purpose = #{purpose},
+        model = #{model},
+        model_temp = #{modelTemp},
+        purchase_way = #{purchaseWay}
+        <if test="nameId != null">
+            , name_id = #{nameId}
+        </if>
+        where id = #{id}
+    </update>
+
+    <update id="review" parameterType="com.example.entity.ApplicationRecord">
+        update `application_record`
+        set status = #{status},
+            reviewer_id = #{reviewerId},
+            review_time = #{reviewTime},
+            review_remark = #{reviewRemark},
+            purchase_way = #{purchaseWay}
+        where id = #{id}
+    </update>
+
+
+</mapper>

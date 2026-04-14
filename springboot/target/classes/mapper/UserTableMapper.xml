@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.UserTableMapper">
+
+    <select id="selectAll" resultType="com.example.entity.UserTable">
+        select usertable.*, academy.name as academyName from usertable
+        left join academy on usertable.academy_id = academy.id
+        <where>
+            <if test="username != null and username != ''">usertable.username like concat('%', #{username}, '%')</if>
+            <if test="name != null and name != ''">usertable.name like concat('%', #{name}, '%')</if>
+            <if test="role != null and role != ''">
+                and usertable.role = #{role}
+            </if>
+            <if test="ids != null and ids != ''">
+                and usertable.id in
+                <foreach collection="idsArr" open="(" close=")" separator="," item="id">
+                    #{id}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+    <insert id="insert" parameterType="com.example.entity.UserTable">
+        insert into `usertable` (username,password,role,posts,name,sex,academy_id,avatar, salt)
+        values (#{username}, #{password},#{role}, #{posts}, #{name}, #{sex}, #{academyId}, #{avatar}, #{salt})
+    </insert>
+
+    <update id="updateById" parameterType="com.example.entity.UserTable">
+        update `usertable` set username = #{username}, password = #{password}, posts= #{posts},
+                               role= #{role}, name = #{name}, sex = #{sex}, academy_id = #{academyId},
+                               avatar = #{avatar}, salt =#{salt}
+        where id = #{id}
+    </update>
+</mapper>
